@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import List, Optional
+import sys
+sys.path.insert(0, '/Users/Shark/Projects/final_project/yolov5-fastapi-demo')
 
 import cv2
 import numpy as np
@@ -13,8 +15,7 @@ import random
 app = FastAPI()
 templates = Jinja2Templates(directory = 'templates')
 
-model_selection_options = ['yolov5s','yolov5m','yolov5l','yolov5x','yolov5n',
-                        'yolov5n6','yolov5s6','yolov5m6','yolov5l6','yolov5x6']
+model_selection_options = ['best']
 model_dict = {model_name: None for model_name in model_selection_options} #set up model cache
 
 colors = [tuple([random.randint(0, 255) for _ in range(3)]) for _ in range(100)] #for bbox plotting
@@ -30,6 +31,12 @@ def home(request: Request):
     return templates.TemplateResponse('home.html', {
             "request": request,
             "model_selection_options": model_selection_options,
+        })
+
+@app.get("/capture.html")
+async def capture(request: Request):
+    return templates.TemplateResponse('capture.html', 
+            {"request": request,
         })
 
 @app.get("/drag_and_drop_detect")
@@ -67,9 +74,8 @@ def detect_with_server_side_rendering(request: Request,
     If you just want JSON results, just return the results of the 
     results_to_json() function and skip the rest
     '''
-
-    if model_dict[model_name] is None:
-        model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
+    
+    model_dict[model_name] = torch.hub.load('ultralytics/yolov5', 'custom', path='./best.pt', force_reload=True) 
 
     img_batch = [cv2.imdecode(np.fromstring(file.file.read(), np.uint8), cv2.IMREAD_COLOR)
                     for file in file_list]
@@ -88,10 +94,10 @@ def detect_with_server_side_rendering(request: Request,
         for bbox in bbox_list:
             label = f'{bbox["class_name"]} {bbox["confidence"]:.2f}'
             plot_one_box(bbox['bbox'], img, label=label, 
-                    color=colors[int(bbox['class'])], line_thickness=3)
+                    line_thickness=3)
 
         img_str_list.append(base64EncodeImage(img))
-
+    #color=colors[int(bbox['class'])]
     #escape the apostrophes in the json string representation
     encoded_json_results = str(json_results).replace("'",r"\'").replace('"',r'\"')
 

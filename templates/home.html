@@ -4,14 +4,49 @@ Implements a simple Bootstrap 5 form submission interface for YOLOv5 detection.
 
 {% extends "layout.html" %}
 
-{% block title %} <title>YOLOv5 Demo</title> {% endblock %}
+{% block title %} <title>Do You Know What You Are Taking?</title> {% endblock %}
 
 {% block content %}
 <div class="m-2">
   <h5>Upload image(s) and select a YOLOv5 model</h5>
 
   <hr/>
-
+  <body>
+    <!-- Main content of the HTML -->
+    <main id="camera">
+      <!-- Camera view -->
+      <!-- canvas: Area for drawing graphics on a web page -->
+      <canvas id="camera-view"></canvas>
+  
+      <!-- Camera device -->
+      <!-- Play the video streaming in "camera-view" -->
+      <video id="camera-device" autoplay playsinline></video>
+  
+      <!-- Photo display -->
+      <img alt="" id="photo-display" />
+  
+      <div id="camera-button" class="d-grid gap-2">
+        <!-- Front camera button -->
+        <button id="front-camera-button" class="btn btn-secondary mx-4">
+          Front Camera
+        </button>
+  
+        <!-- Take photo button -->
+        <button id="take-photo-button" class="btn btn-primary mx-4">
+          Take Photo
+        </button>
+  
+        <!-- Send photo button -->
+        <button id="send-photo-button" class="btn btn-primary mx-4">
+          Send Photo
+        </button>
+      </div>
+    </main>
+  
+    <!-- Reference to the JavaScript file -->
+    <script src="yolov5-fastapi-demo/scripts/capture.js"></script>
+  </body>
+  
   <form method="post" action="" enctype="multipart/form-data">
     <div class="my-2">
       <label for="file_list" class="form-label">Upload Images</label>
