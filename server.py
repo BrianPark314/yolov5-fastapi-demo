@@ -1,10 +1,15 @@
 from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from typing import List, Optional
+import starlette.status as status
 from fastapi.staticfiles import StaticFiles
 import sys
 import os
+from PIL import Image
+import io
+from datetime import datetime
 sys.path.insert(0, '/Users/Shark/Projects/final_project/yolov5-fastapi-demo')
 
 import cv2
@@ -20,6 +25,7 @@ app = FastAPI()
 app.mount("/scripts", StaticFiles(directory=os.path.join(root, 'scripts')), name="js")
 templates = Jinja2Templates(directory = 'templates')
 
+DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S-%f"
 model_selection_options = ['best']
 model_dict = {model_name: None for model_name in model_selection_options} #set up model cache
 
@@ -56,14 +62,59 @@ def drag_and_drop_detect(request: Request):
             "model_selection_options": model_selection_options,
         })
 
+@app.get("/images/{file_name}")
+def show_results(request:Request,
+                 file_name:str,
+                 img_size:int = 640):
+
+    file_path = "./images/"+ file_name + '.png'
+    with open(file_path, 'rb') as f:
+        data = f.read()
+    img_batch  = [cv2.imdecode(np.fromstring(data, np.uint8), cv2.IMREAD_COLOR)]
+    img_batch_rgb = [cv2.cvtColor(img, cv2.COLOR_BGR2RGB) for img in img_batch]
+
+    model = torch.hub.load('ultralytics/yolov5', 'custom', path='./best.pt', force_reload=True) 
+
+    results = model(img_batch_rgb, size = img_size)
+    json_results = results_to_json(results,model)
+    img_str_list = []
+    #plot bboxes on the image
+    for img, bbox_list in zip(img_batch, json_results):
+        for bbox in bbox_list:
+            label = f'{bbox["class_name"]} {bbox["confidence"]:.2f}'
+            plot_one_box(bbox['bbox'], img, label=label, 
+                    line_thickness=3)
+
+        img_str_list.append(base64EncodeImage(img))
+
+    encoded_json_results = str(json_results).replace("'",r"\'").replace('"',r'\"')
+
+    return templates.TemplateResponse('show_results.html', {
+            'request': request,
+            'bbox_image_data_zipped': zip(img_str_list,json_results), #unzipped in jinja2 template
+            'bbox_data_str': encoded_json_results,
+        })
+
 
 ##############################################
 #------------POST Request Routes--------------
 ##############################################
+
+@app.post("/save")
+async def save_img(request: Request,
+                    file_list: List[UploadFile] = File(...)):
+    img_bytes = [file.file.read() for file in file_list][0]
+    img = Image.open(io.BytesIO(img_bytes))
+    now_time = datetime.now().strftime(DATETIME_FORMAT) # 저장 형식 
+    img_savename = f"images/{now_time}.png"
+    img.save(img_savename)
+    img_savename = img_savename.split('.')[0]
+    return RedirectResponse(url=img_savename, status_code=status.HTTP_302_FOUND)
+    
 @app.post("/")
 async def detect_with_server_side_rendering(request: Request,
                         file_list: List[UploadFile] = File(...), 
-                        model_name: str = Form(...),
+                        model_name: str = Form('best'),
                         img_size: int = Form(640)):
     
     '''
@@ -79,7 +130,7 @@ async def detect_with_server_side_rendering(request: Request,
     If you just want JSON results, just return the results of the 
     results_to_json() function and skip the rest
     '''
-    
+
     model_dict[model_name] = torch.hub.load('ultralytics/yolov5', 'custom', path='./best.pt', force_reload=True) 
 
     img_batch = [cv2.imdecode(np.fromstring(file.file.read(), np.uint8), cv2.IMREAD_COLOR)
@@ -106,6 +157,7 @@ async def detect_with_server_side_rendering(request: Request,
     #escape the apostrophes in the json string representation
     encoded_json_results = str(json_results).replace("'",r"\'").replace('"',r'\"')
 
+    # show_results(request, zip(img_str_list,json_results), encoded_json_results)
     return templates.TemplateResponse('show_results.html', {
             'request': request,
             'bbox_image_data_zipped': zip(img_str_list,json_results), #unzipped in jinja2 template
@@ -132,9 +184,8 @@ def detect_via_api(request: Request,
     Intended for API usage.
     '''
 
-    if model_dict[model_name] is None:
-        model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
-    
+    model_dict[model_name] = torch.hub.load('ultralytics/yolov5', 'custom', path='./best.pt', force_reload=True) 
+
     img_batch = [cv2.imdecode(np.fromstring(file.file.read(), np.uint8), cv2.IMREAD_COLOR)
                 for file in file_list]
 
@@ -196,7 +247,7 @@ def plot_one_box(x, im, color=(128, 128, 128), label=None, line_thickness=3):
 
 def base64EncodeImage(img):
     ''' Takes an input image and returns a base64 encoded string representation of that image (jpg format)'''
-    _, im_arr = cv2.imencode('.jpg', img)
+    _, im_arr = cv2.imencode('.png', img)
     im_b64 = base64.b64encode(im_arr.tobytes()).decode('utf-8')
 
     return im_b64
@@ -216,4 +267,4 @@ if __name__ == '__main__':
                         for model_name in model_selection_options}
     
     app_str = 'server:app' #make the app string equal to whatever the name of this file is
-    uvicorn.run(app_str, host= opt.host, port=opt.port, reload=True)
+    uvicorn.run(app_str, host= '0.0.0.0', port=opt.port, reload=True)

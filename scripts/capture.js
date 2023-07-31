@@ -91,20 +91,23 @@ function dataURLToBlob(dataUrl) {
 function sendDataUrlViaForm(dataUrl) {
     var formData = new FormData();
     var blob = dataURLToBlob(dataUrl);
-    formData.append("file", blob, "filename.png"); // "file"은 서버에서 파일을 받을 때 사용할 키 이름입니다.
+    formData.append("file_list", blob, "filename.png"); // "file"은 서버에서 파일을 받을 때 사용할 키 이름입니다.
 
     // Ajax 또는 Fetch 등을 사용하여 formData를 서버로 전송합니다.
     // 아래는 Fetch API를 사용한 예시입니다.
-    fetch("/detect", {
+    fetch("/save", {
         method: "POST",
         body: formData
     })
     .then(response => {
       // 응답 처리
+      console.log(response);
+      window.location.href = response.url;
     })
     .catch(error => {
       // 오류 처리
     });
+
 }
 
 // Start the camera and video streaming when the window loads
