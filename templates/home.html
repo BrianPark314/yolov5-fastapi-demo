@@ -8,7 +8,7 @@ Implements a simple Bootstrap 5 form submission interface for YOLOv5 detection.
 
 {% block content %}
 <div class="m-2">
-  <h5>Upload image(s) and select a YOLOv5 model</h5>
+  <h5>사진을 찍어주세요.</h5>
 
   <hr/>
   <body>
@@ -28,23 +28,23 @@ Implements a simple Bootstrap 5 form submission interface for YOLOv5 detection.
       <div id="camera-button" class="d-grid gap-2">
         <!-- Front camera button -->
         <button id="front-camera-button" class="btn btn-secondary mx-4">
-          Front Camera
+          전면 카메라
         </button>
   
         <!-- Take photo button -->
         <button id="take-photo-button" class="btn btn-primary mx-4">
-          Take Photo
+          사진 찍기
         </button>
   
         <!-- Send photo button -->
         <button id="send-photo-button" class="btn btn-primary mx-4">
-          Send Photo
+          사진 전송
         </button>
       </div>
     </main>
   
     <!-- Reference to the JavaScript file -->
-    <script src="yolov5-fastapi-demo/scripts/capture.js"></script>
+    <script src="scripts/capture.js"></script>
   </body>
   
   <form method="post" action="" enctype="multipart/form-data">

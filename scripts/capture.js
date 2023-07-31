@@ -57,9 +57,9 @@ frontCameraButton.onclick = function () {
   frontCamera = !frontCamera;
   // Setup the button text
   if (frontCamera) {
-    frontCameraButton.textContent = "Back Camera";
+    frontCameraButton.textContent = "후면 카메라";
   } else {
-    frontCameraButton.textContent = "Front Camera";
+    frontCameraButton.textContent = "전면 카메라";
   }
   // Start the video streaming
   cameraStart();
@@ -95,7 +95,7 @@ function sendDataUrlViaForm(dataUrl) {
 
     // Ajax 또는 Fetch 등을 사용하여 formData를 서버로 전송합니다.
     // 아래는 Fetch API를 사용한 예시입니다.
-    fetch("/predict", {
+    fetch("/detect", {
         method: "POST",
         body: formData
     })

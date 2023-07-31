@@ -2,7 +2,9 @@ from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import List, Optional
+from fastapi.staticfiles import StaticFiles
 import sys
+import os
 sys.path.insert(0, '/Users/Shark/Projects/final_project/yolov5-fastapi-demo')
 
 import cv2
@@ -12,7 +14,10 @@ import torch
 import base64
 import random
 
+root = os.path.dirname(os.path.abspath(__file__))
+
 app = FastAPI()
+app.mount("/scripts", StaticFiles(directory=os.path.join(root, 'scripts')), name="js")
 templates = Jinja2Templates(directory = 'templates')
 
 model_selection_options = ['best']
@@ -34,7 +39,7 @@ def home(request: Request):
         })
 
 @app.get("/capture.html")
-async def capture(request: Request):
+def capture(request: Request):
     return templates.TemplateResponse('capture.html', 
             {"request": request,
         })
@@ -56,7 +61,7 @@ def drag_and_drop_detect(request: Request):
 #------------POST Request Routes--------------
 ##############################################
 @app.post("/")
-def detect_with_server_side_rendering(request: Request,
+async def detect_with_server_side_rendering(request: Request,
                         file_list: List[UploadFile] = File(...), 
                         model_name: str = Form(...),
                         img_size: int = Form(640)):
